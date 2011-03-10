@@ -395,18 +395,22 @@ void hmgetCommand(redisClient *c) {
 }
 
 void hdelCommand(redisClient *c) {
+    int deleted = 0, i;
     robj *o;
+
     if ((o = lookupKeyWriteOrReply(c,c->argv[1],shared.czero)) == NULL ||
         checkType(c,o,REDIS_HASH)) return;
 
-    if (hashTypeDelete(o,c->argv[2])) {
-        if (hashTypeLength(o) == 0) dbDelete(c->db,c->argv[1]);
-        addReply(c,shared.cone);
-        signalModifiedKey(c->db,c->argv[1]);
-        server.dirty++;
-    } else {
-        addReply(c,shared.czero);
+    for(i=2; i < c->argc; i ++){
+      if (hashTypeDelete(o,c->argv[i])) {
+          if (hashTypeLength(o) == 0) dbDelete(c->db,c->argv[1]);
+          deleted++;
+      }
     }
+
+    addReplyLongLong(c,deleted);
+    signalModifiedKey(c->db,c->argv[1]);
+    server.dirty++;
 }
 
 void hlenCommand(redisClient *c) {
